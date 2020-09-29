@@ -5,6 +5,10 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class ClickToSteer : MonoBehaviour
 {
+    public float maxSpeed = 1.0f;
+    public float rotationSmooth;
+    public float brakingDistance;
+
     NavMeshAgent m_Agent;
     NavMeshPath m_Path;
     int pathIter = 1;
@@ -12,6 +16,13 @@ public class ClickToSteer : MonoBehaviour
     Vector3 destination = new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
     Vector3 endDestination = new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
     RaycastHit m_HitInfo = new RaycastHit();
+
+    [HideInInspector]
+    public float speed, targetSpeed;
+    Vector3 rotVel = Vector3.zero;
+    float linearVel = 0;
+    float speedSmooth = 0.99f;
+
 
     private void OnDrawGizmos()
     {
@@ -27,12 +38,14 @@ public class ClickToSteer : MonoBehaviour
         }
     }
 
+
     void Start()
     {
         m_Agent = GetComponent<NavMeshAgent>();
         m_Agent.isStopped = true;
         m_Path = new NavMeshPath();
     }
+
 
     void Update()
     {
@@ -70,15 +83,20 @@ public class ClickToSteer : MonoBehaviour
         if (destination.x < float.PositiveInfinity)
         {
             Vector3 direction = destination - AgentPosition;
-            var newDir = Vector3.RotateTowards(transform.forward, direction, 50 * Time.deltaTime, 0.0f);
+            //var newDir = Vector3.RotateTowards(transform.forward, direction, 50 * Time.deltaTime, 0.0f);
+            var newDir = Vector3.SmoothDamp(transform.forward, direction, ref rotVel, rotationSmooth);
             var newRot = Quaternion.LookRotation(newDir);
-            transform.rotation = Quaternion.Slerp(transform.rotation, newRot, Time.deltaTime * 2f);
+            //transform.rotation = Quaternion.Slerp(transform.rotation, newRot, 0.03f);
+            transform.rotation = newRot;
                 
             float distance = Vector3.Distance(AgentPosition, destination);
 
             if (distance > m_Agent.radius + 0.1)
             {
-                Vector3 movement = transform.forward * Time.deltaTime * 2f;
+                speed = Mathf.SmoothDamp(speed, targetSpeed, ref linearVel, speedSmooth);
+                //Vector3 movement = transform.forward * Time.deltaTime * 2f;
+
+                Vector3 movement = transform.forward * Time.deltaTime * Mathf.Max(speed, 0) * maxSpeed;
 
                 m_Agent.Move(movement);
             }
@@ -91,8 +109,20 @@ public class ClickToSteer : MonoBehaviour
                     m_Agent.isStopped = true;
                 }
             }
+
+
+            // Manage targert speed
+            float totalDist = Vector3.Distance(AgentPosition, m_Path.corners[m_Path.corners.Length - 1]);
+            if (distance < brakingDistance) {
+                targetSpeed = Mathf.Min(totalDist / brakingDistance, 1.0f);
+                speedSmooth = 0f;
+            } else {
+                targetSpeed = 1.0f;
+                speedSmooth = 0.8f;
+            }
         }
     }
+
 
     void SetAgentPosition()
     {

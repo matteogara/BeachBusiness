@@ -3,28 +3,118 @@ using UnityEngine.AI;
 
 public class SegwayController : MonoBehaviour
 {
+    public float rotSpeed = 50;
+    public float linearSpeed = 2;
 
-    public Camera cam;
-    public NavMeshAgent agent;
+    NavMeshAgent m_Agent;
+    NavMeshPath m_Path;
+    int pathIter = 1;
+    Vector3 AgentPosition;
+    Vector3 destination =
+        new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
+    Vector3 endDestination =
+        new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
+    RaycastHit m_HitInfo = new RaycastHit();
 
-    // Start is called before the first frame update
-    void Start()
+    private void OnDrawGizmos()
     {
-        
+        Gizmos.color = Color.blue;
+        if (m_Path != null && m_Path.corners != null && m_Path.corners.Length > 0)
+        {
+            var prev = AgentPosition;
+            for (int i = pathIter;
+                i < m_Path.corners.Length; ++i)
+            {
+                Gizmos.DrawLine(prev, m_Path.corners[i]);
+                prev = m_Path.corners[i];
+            }
+        }
     }
 
-    // Update is called once per frame
+    void Start()
+    {
+        m_Agent = GetComponent<NavMeshAgent>();
+        m_Agent.isStopped = true;
+        m_Path = new NavMeshPath();
+    }
+
     void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        SetAgentPosition();
+        if (Input.GetMouseButtonDown(0) &&
+            !Input.GetKey(KeyCode.LeftShift))
         {
-            Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-
-            if (Physics.Raycast(ray, out hit))
+            var ray =
+                Camera.main.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray.origin, ray.direction, out m_HitInfo))
             {
-                agent.SetDestination(hit.point);
+                //m_Agent.destination = m_HitInfo.point;
+                m_Path = new NavMeshPath();
+                endDestination = m_HitInfo.point;
+                m_Agent.CalculatePath(endDestination,
+                                      m_Path);
+                pathIter = 1;
+                m_Agent.isStopped = false;
+
             }
+        }
+
+        if (m_Path.corners == null || m_Path.corners.Length == 0)
+            return;
+
+
+        if (pathIter >= m_Path.corners.Length)
+        {
+            destination =
+                new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
+            m_Agent.isStopped = true;
+            return;
+        }
+        else
+        {
+            destination = m_Path.corners[pathIter];
+        }
+
+        if (destination.x < float.PositiveInfinity)
+        {
+            Vector3 direction = destination - AgentPosition;
+            var newDir = Vector3.RotateTowards(transform.forward, direction, rotSpeed * Time.deltaTime, 0.0f);
+            var newRot = Quaternion.LookRotation(newDir);
+            transform.rotation =
+                Quaternion.Slerp(transform.rotation,
+                                 newRot, Time.deltaTime * 2f);
+
+            float distance =
+                Vector3.Distance(AgentPosition, destination);
+
+            if (distance > m_Agent.radius + 0.1)
+            {
+                Vector3 movement =
+                    transform.forward * Time.deltaTime * linearSpeed;
+
+                m_Agent.Move(movement);
+            }
+            else
+            {
+                ++pathIter;
+                if (pathIter >= m_Path.corners.Length)
+                {
+                    destination =
+                        new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
+                    m_Agent.isStopped = true;
+                }
+            }
+        }
+    }
+
+    void SetAgentPosition()
+    {
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(transform.position,
+                                  out hit, 1.0f,
+                                  NavMesh.AllAreas))
+        {
+            AgentPosition = hit.position;
         }
     }
 }

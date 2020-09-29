@@ -2,34 +2,48 @@
 using System.Collections.Generic;
 using TreeEditor;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class SegwayRoll : MonoBehaviour
 {
+    public ClickToSteer clickToSteer;
+    public NavMeshAgent agent;
+    public float rollAmplitude;
+    public float smoothing;
 
-    public float rollMultiplier = 20;
-    public float smoothness = 0.02f;
-    public Transform agentTrans;
-
-    Vector3 oldPos;
-    float vel;
+    float prevVel, roll;
 
 
     void Update()
     {
-        vel = Mathf.Lerp(vel, GetVelocity(agentTrans), smoothness);
-        transform.localRotation = Quaternion.Euler(vel * rollMultiplier, 0, 0);
-        Debug.Log(vel);
-    }
+        //// Calcola accelerazione
+        //float vel = clickToSteer.speed;
+        //float accel = (vel - prevVel) / Time.deltaTime;
+        //if (Mathf.Approximately(vel, prevVel))
+        //{
+        //    accel = 0;
+        //}
 
+        //// Applica rotazione
+        //float targetRoll = accel * rollAmplitude;
+        //roll = Mathf.Lerp(roll, targetRoll, smoothing);
+        //transform.localRotation = Quaternion.Euler(roll, 0, 0);
 
-    float GetVelocity(Transform _t)
-    {
-        Vector3 _pos = _t.position;
-        Vector3 _shift = Vector3.Project((_pos - oldPos), _t.forward);
-        float _vel = _shift.magnitude / Time.deltaTime;
+        //prevVel = vel;
 
-        oldPos = _pos;
+        float targetRoll;
 
-        return _vel;
+        if (clickToSteer.targetSpeed > 0.99f) {
+            targetRoll = (clickToSteer.targetSpeed - clickToSteer.speed) * rollAmplitude;
+        } else {
+            targetRoll = (0 - clickToSteer.targetSpeed) * rollAmplitude;
+        }
+
+        if (agent.isStopped) {
+            targetRoll = 0;
+        }
+
+        roll = Mathf.Lerp(roll, targetRoll, smoothing);
+        transform.localRotation = Quaternion.Euler(roll, 0, 0);
     }
 }
