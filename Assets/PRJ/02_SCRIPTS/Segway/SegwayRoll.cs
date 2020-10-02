@@ -6,7 +6,7 @@ using UnityEngine.AI;
 
 public class SegwayRoll : MonoBehaviour
 {
-    public ClickToSteer clickToSteer;
+    public SegwayController clickToSteer;
     public NavMeshAgent agent;
     public float rollAmplitude;
     public float smoothing;

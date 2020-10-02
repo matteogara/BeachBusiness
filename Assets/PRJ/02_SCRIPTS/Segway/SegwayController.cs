@@ -3,7 +3,7 @@ using UnityEngine.AI;
 
 // Use physics raycast hit from mouse click to set agent destination
 [RequireComponent(typeof(NavMeshAgent))]
-public class ClickToSteer : MonoBehaviour
+public class SegwayController : MonoBehaviour
 {
     public float maxSpeed = 1.0f;
     public float rotationSmooth;
@@ -39,7 +39,7 @@ public class ClickToSteer : MonoBehaviour
     }
 
 
-    void Start()
+    void Awake()
     {
         m_Agent = GetComponent<NavMeshAgent>();
         m_Agent.isStopped = true;
@@ -56,12 +56,7 @@ public class ClickToSteer : MonoBehaviour
             if (Physics.Raycast(ray.origin, ray.direction, out m_HitInfo))
             {
                 //m_Agent.destination = m_HitInfo.point;
-                m_Path = new NavMeshPath();
-                endDestination = m_HitInfo.point;
-                m_Agent.CalculatePath(endDestination, m_Path);
-                pathIter = 1;
-                m_Agent.isStopped = false;
-                
+                SetDestination(m_HitInfo.point);          
             }
         }
 
@@ -131,5 +126,13 @@ public class ClickToSteer : MonoBehaviour
         {
             AgentPosition = hit.position;
         }
+    }
+
+
+    public void SetDestination(Vector3 _point) {
+        m_Path = new NavMeshPath();
+        m_Agent.CalculatePath(_point, m_Path);
+        pathIter = 1;
+        m_Agent.isStopped = false;
     }
 }

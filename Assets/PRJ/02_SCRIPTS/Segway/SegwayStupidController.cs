@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.AI;
 
-public class SegwayController : MonoBehaviour
+public class SegwayStupidController : MonoBehaviour
 {
     public float rotSpeed = 50;
     public float linearSpeed = 2;
